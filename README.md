@@ -24,7 +24,7 @@ This repository contains the complete implementation, analytical documentation, 
 
 ```
 ├── Trusted-Computing-CIA2.docx          # Final report (Word document)
-├── Trusted-Computing-CIA2.pdf           # Final report (PDF document)
+├── Assignment2_23011102068.pdf          # Final report (PDF document)
 ├── README.md                           # Documentation, screenshots, and reproduction guide
 ├── .gitignore                          # Ignores Word temp files, Python cache, and OS files
 ├── run_lab.sh                          # Bash script to run all lab steps end-to-end
