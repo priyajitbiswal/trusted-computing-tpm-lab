@@ -1,0 +1,147 @@
+{
+  "student": {
+    "name": "Priyajit Biswal",
+    "reg_no": "23011102068",
+    "course": "CS4005: Trusted Computing and Security Models",
+    "assignment": "CIA-2"
+  },
+  "task1": [
+    {
+      "title": "TPM Capability & Fixed Properties Verification",
+      "cmd": "tpm2_getcap properties-fixed | head -n 14",
+      "stdout": "TPM2_PT_FAMILY_INDICATOR:\n  raw: 0x322E3000\n  value: \"2.0\"\nTPM2_PT_LEVEL:\n  raw: 0\nTPM2_PT_REVISION:\n  raw: 0xB7\n  value: 1.83\nTPM2_PT_DAY_OF_YEAR:\n  raw: 0x19\nTPM2_PT_YEAR:\n  raw: 0x7E8\nTPM2_PT_MANUFACTURER:\n  raw: 0x49424D00\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "TPM Hardware Random Number Generation (TRNG)",
+      "cmd": "tpm2_getrandom --hex 16",
+      "stdout": "176dfef018f9ad85beadabd1081d4af8",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Platform Configuration Registers (PCRs) Initial Read",
+      "cmd": "tpm2_pcrread sha256:0,1,2,7,16",
+      "stdout": "  sha256:\n    0 : 0x0000000000000000000000000000000000000000000000000000000000000000\n    1 : 0x0000000000000000000000000000000000000000000000000000000000000000\n    2 : 0x0000000000000000000000000000000000000000000000000000000000000000\n    7 : 0x0000000000000000000000000000000000000000000000000000000000000000\n    16: 0x0000000000000000000000000000000000000000000000000000000000000000\n",
+      "stderr": "",
+      "exit_code": 0
+    }
+  ],
+  "task2": [
+    {
+      "title": "Create Secret Data Payload",
+      "cmd": "echo \"SECURE_DATA_PRIYAJIT_23011102068\" > secret_payload.txt && cat secret_payload.txt",
+      "stdout": "SECURE_DATA_PRIYAJIT_23011102068\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Create Primary Key in Owner Hierarchy",
+      "cmd": "tpm2_createprimary -C o -g sha256 -G rsa -c primary.ctx",
+      "stdout": "name-alg:\n  value: sha256\n  raw: 0xb\nattributes:\n  value: fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt\n  raw: 0x30072\ntype:\n  value: rsa\n  raw: 0x1\nexponent: 65537\nbits: 2048\nscheme:\n  value: null\n  raw: 0x10\nscheme-halg:\n  value: (null)\n  raw: 0x0\nsym-alg:\n  value: aes\n  raw: 0x6\nsym-mode:\n  value: cfb\n  raw: 0x43\nsym-keybits: 128\nrsa: 9e39a62d8d1477ecd7b410d6843a0075cea4cee163d2be070b8781cd850c8deb5961b73b848f61f5d69ee66dcca5437c860853117e0d629b19282bd3b2fdd74e7f61eb81b705274b37ae705bf56453273fe5d72ecad9544814e550af0e15e4694a57fc50b6950292e4f4e0cd131f4cc7256c572adcee208a162ddf4ea5dd363586cd48667b3c45bf89f84c8577dabe6c083ab0264473cd463c69ad53add76d93b96ceea72bc5fdfe819901dc963e0168d305ef03702faf861848afb07f964b101cdd212bea03a0bfac953aecdc6e2c22597d9430c73736ae59d3f590f2a5e145f5a75e34161aeec1eb2720fa3f187a9a4de7df7df9132ea7ba1632793818e6cb\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Extract Target PCR 16 Reference State",
+      "cmd": "tpm2_pcrread sha256:16 -o pcr16_val.bin",
+      "stdout": "  sha256:\n    16: 0x0000000000000000000000000000000000000000000000000000000000000000\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Calculate PCR Policy Digest for PCR 16",
+      "cmd": "tpm2_createpolicy --policy-pcr -l sha256:16 -f pcr16_val.bin -L pcr16.policy && xxd -p pcr16.policy",
+      "stdout": "bff2d58e9813f97cefc14f72ad8133bc7092d652b7c877959254af140c841f36\nbff2d58e9813f97cefc14f72ad8133bc7092d652b7c877959254af140c84\n1f36\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Seal Secret Data Bound to PCR Policy",
+      "cmd": "tpm2_create -C primary.ctx -u sealed.pub -r sealed.priv -i secret_payload.txt -L pcr16.policy",
+      "stdout": "name-alg:\n  value: sha256\n  raw: 0xb\nattributes:\n  value: fixedtpm|fixedparent\n  raw: 0x12\ntype:\n  value: keyedhash\n  raw: 0x8\nalgorithm: \n  value: null\n  raw: 0x10\nkeyedhash: dab50410a60577ef8f30b8ecd93fbc7b0e57df868a9dd906b8ad86ea15849f53\nauthorization policy: bff2d58e9813f97cefc14f72ad8133bc7092d652b7c877959254af140c841f36\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Load Sealed Object Context into TPM",
+      "cmd": "tpm2_load -C primary.ctx -u sealed.pub -r sealed.priv -c sealed.ctx",
+      "stdout": "",
+      "stderr": "WARNING:esys:src/tss2-esys/api/Esys_Load.c:324:Esys_Load_Finish() Received TPM Error \nERROR:esys:src/tss2-esys/api/Esys_Load.c:112:Esys_Load() Esys Finish ErrorCode (0x00000902) \nERROR: Esys_Load(0x902) - tpm:warn(2.0): out of memory for object contexts\nERROR: Unable to run tpm2_load\n",
+      "exit_code": 1
+    }
+  ],
+  "task3": [
+    {
+      "title": "Start Policy Session for Legitimate State",
+      "cmd": "tpm2_startauthsession -S session.ctx --policy-session",
+      "stdout": "",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Evaluate Current PCR 16 against Session",
+      "cmd": "tpm2_policypcr -S session.ctx -l sha256:16",
+      "stdout": "bff2d58e9813f97cefc14f72ad8133bc7092d652b7c877959254af140c841f36\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Successfully Unseal Data with Valid Policy",
+      "cmd": "tpm2_unseal -p session:session.ctx -c sealed.ctx -o unsealed_success.txt && cat unsealed_success.txt",
+      "stdout": "",
+      "stderr": "ERROR: Incorrect handle value, got: \"sealed.ctx\", expected a handle number\nERROR: Unable to read as BIO file\nERROR: Unable to fetch public/private portions of TSS PRIVKEY\nERROR: Cannot make sense of object context \"sealed.ctx\"\nERROR: Invalid item handle authorization\nERROR: Unable to run tpm2_unseal\n",
+      "exit_code": 1
+    },
+    {
+      "title": "Flush Policy Session Context",
+      "cmd": "tpm2_flushcontext session.ctx",
+      "stdout": "",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Simulate System Tampering: Extend PCR 16 with Malicious Measurement",
+      "cmd": "tpm2_pcrextend 16:sha256=f1d2d2f924e986ac86fdf7b36c94bcdf32beec158525b6a3832c3bb47565ef02",
+      "stdout": "",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Verify Altered PCR 16 Digest",
+      "cmd": "tpm2_pcrread sha256:16",
+      "stdout": "  sha256:\n    16: 0x897BDEB41C92E1BD8EFBC4645F6ECEB0CC2A2B175CB437ACD5D5B48CB8300AF9\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Start New Policy Session for Tampered State",
+      "cmd": "tpm2_startauthsession -S session.ctx --policy-session",
+      "stdout": "",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Evaluate Tampered PCR 16 against Policy",
+      "cmd": "tpm2_policypcr -S session.ctx -l sha256:16",
+      "stdout": "5f8f2df4f3d6ce56d07767253421976686897669fe449b5a1562b2ef5b27ed30\n",
+      "stderr": "",
+      "exit_code": 0
+    },
+    {
+      "title": "Attempt Unsealing with Tampered Platform State (Expect Failure)",
+      "cmd": "tpm2_unseal -p session:session.ctx -c sealed.ctx -o unsealed_fail.txt",
+      "stdout": "",
+      "stderr": "ERROR: Incorrect handle value, got: \"sealed.ctx\", expected a handle number\nERROR: Unable to read as BIO file\nERROR: Unable to fetch public/private portions of TSS PRIVKEY\nERROR: Cannot make sense of object context \"sealed.ctx\"\nERROR: Invalid item handle authorization\nERROR: Unable to run tpm2_unseal\n",
+      "exit_code": 1
+    },
+    {
+      "title": "Flush Second Policy Session Context",
+      "cmd": "tpm2_flushcontext session.ctx",
+      "stdout": "",
+      "stderr": "",
+      "exit_code": 0
+    }
+  ]
+}
